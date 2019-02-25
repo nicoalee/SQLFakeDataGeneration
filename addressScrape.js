@@ -123,7 +123,7 @@ function generatePeopleSQL(fileName, num, country, relationName) {
     genNames(num, country)
         .then(function(data) {
             data.forEach(person => {
-                let tempStr = insertINTO + "\'" + person[0] + "\'" + "," + person[1] + ");" + "\n"
+                let tempStr = insertINTO + "\'" + person[1] + "\'" + "," + "\'" + person[0] + "\'" + ");" + "\n"
                 fileString = fileString + tempStr
             })
             fs.appendFile(fileName, fileString, function(err) {
