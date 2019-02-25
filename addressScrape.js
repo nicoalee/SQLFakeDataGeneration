@@ -210,12 +210,12 @@ function generatePropertiesSQL(fileName, num, relationName, country, neighborhoo
 // custom list of neighborhoods, but ensure that they are in the database already, or else your insert statements
 // will not work. 
 
-generatePeopleSQL("genPeople.sql", 100, "CA", "Person")
-generateNeighbourhoodSQL("genHood.sql", 8, "Neighbourhood")
+generatePeopleSQL("genPeople.sql", 100, "DK", "Person")
+generateNeighbourhoodSQL("genHood.sql", 15, "Neighbourhood")
     .then(function(data) {
         let dataArr = []
         for (let i = 0; i < data.length; i++) {
             dataArr.push(data[i][0])
         }
-        generatePropertiesSQL("genProp.sql", 50, "Property", "CA" , dataArr)
+        generatePropertiesSQL("genProp.sql", 100, "Property", "CA" , dataArr)
     })
