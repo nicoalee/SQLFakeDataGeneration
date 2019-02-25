@@ -1,10 +1,9 @@
+const async = require('async');
 const cheerio = require('cheerio')
 const phantom = require('phantom')
 const fetch = require('node-fetch')
 var fs = require('fs');
 const pg = require('pg')
-
-var globalNeighborhoodsList = []
 
 const url2 = "https://randomuser.me/api/?&nat="
 const url3 = "http://lewenberg.com/sng/index.php?submit=Generate+names&number="
@@ -102,9 +101,8 @@ async function genNeighbourhoods(num) {
 function generateNeighbourhoodSQL(fileName, num, relationName) {
     let fileString = ""
     let insertINTO = "INSERT INTO " + relationName + " VALUES("
-    genNeighbourhoods(num)
+    return genNeighbourhoods(num)
         .then(function(data) {
-            globalNeighborhoodsList = data
             data.forEach(hood => {
                 let tempStr = insertINTO + "\'" + hood[0] + "\'" + "," + "\'" + hood[1] + "\'" + ");" + "\n"
                 fileString = fileString + tempStr
@@ -115,6 +113,7 @@ function generateNeighbourhoodSQL(fileName, num, relationName) {
                     console.log("FILE CREATION SUCCESSFUL");
                 }      
             })
+            return data
         })
 }
 
@@ -126,13 +125,14 @@ function generatePeopleSQL(fileName, num, country, relationName) {
             data.forEach(person => {
                 let tempStr = insertINTO + "\'" + person[0] + "\'" + "," + person[1] + ");" + "\n"
                 fileString = fileString + tempStr
-            });
+            })
             fs.appendFile(fileName, fileString, function(err) {
                 if(err) console.log(err);
                 else {
                     console.log("FILE CREATION SUCCESSFUL");
                 }
             })
+            return data
         })
 }
 
@@ -142,8 +142,8 @@ function generatePropertiesSQL(fileName, num, relationName, country, neighborhoo
     genAddresses(num, country)
         .then(function(data) {
             data.forEach(address => {
-                let randIndex = Math.floor(Math.random()*(globalNeighborhoodsList.length))
-                let tempStr = insertINTO + "\'" + address + "\'" + "," + "\'" + globalNeighborhoodsList[randIndex] + "\'" + ");" + "\n"
+                let randIndex = Math.floor(Math.random()*(neighborhoodsList.length))
+                let tempStr = insertINTO + "\'" + address + "\'" + "," + "\'" + neighborhoodsList[randIndex] + "\'" + ");" + "\n"
                 fileString = fileString + tempStr
             });
             fs.appendFile(fileName, fileString, function(err) {
@@ -195,12 +195,11 @@ function generatePropertiesSQL(fileName, num, relationName, country, neighborhoo
 //    the insert statement will look like this:
 //    INSERT INTO Property VALUES('address1', neighborhoodName, email) where
 //    neighborhoodName and email are items that already exist in the database
+
 // Example: Creates a file called genHood.sql that generates 20 insertion statements with
 //          20 unqiue neighborhood names, inserts into PROPERTY relation
-
-globalNeighborhoodsList = ["Little Bighorn", "Castle Hill", "Red Hill", "Toa Payoh" , "Orchard", "Chinatown", "Le Plateau"]
-
-generatePropertiesSQL("genProp.sql", 50, "Property", "CA" , globalNeighborhoodsList)
+// globalNeighborhoodsList = ["Little Bighorn", "Castle Hill", "Red Hill", "Toa Payoh" , "Orchard", "Chinatown", "Le Plateau"]
+// generatePropertiesSQL("genProp.sql", 50, "Property", "CA" , globalNeighborhoodsList)
 
 
 
@@ -209,4 +208,14 @@ generatePropertiesSQL("genProp.sql", 50, "Property", "CA" , globalNeighborhoodsL
 // Then generate Neighborhoods, which will update the globalNeighborhoodsList array with existing neighborhoods.
 // The code will then randomly select neighborhoods that the addresses are part of. You can include you own
 // custom list of neighborhoods, but ensure that they are in the database already, or else your insert statements
-// will not work.
+// will not work. 
+
+generatePeopleSQL("genPeople.sql", 100, "CA", "Person")
+generateNeighbourhoodSQL("genHood.sql", 8, "Neighbourhood")
+    .then(function(data) {
+        let dataArr = []
+        for (let i = 0; i < data.length; i++) {
+            dataArr.push(data[i][0])
+        }
+        generatePropertiesSQL("genProp.sql", 50, "Property", "CA" , dataArr)
+    })
