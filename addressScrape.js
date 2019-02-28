@@ -6,7 +6,7 @@ var fs = require('fs');
 const pg = require('pg')
 
 const url2 = "https://randomuser.me/api/?&nat="
-const url3 = "http://lewenberg.com/sng/index.php?submit=Generate+names&number="
+const montrealNeighbourhoods = ["Ahuntsic-CartierVille", "Anjou", "Côte-des-Neiges", "Lachine", "LaSalle", "Le Plateau-Mont-Royal", "Le Sud-Ouest", "L'Île-Bizard", "Mercier", "Montréal-Nord", "Outremont", "Pierrefonds-Roxboro", "Rivière-des-Prairies", "Rosemont", "Saint-Laurent", "Saint-Léonard", "Verdun", "Ville-Marie", "Villeray"]
 
 async function genAddresses(num, country) {
     return fetch(url2 + country + "&results=" + num)
@@ -46,85 +46,38 @@ async function genNames(num, country) {
     })
 }
 
-async function genNeighbourhoods(num) {
-
-    const instance = await phantom.create()
-    const page = await instance.createPage()
-    const status = await page.open(url3 + num)
-    const content = await page.property('content')
-    const addressArray = []
-    await instance.exit()
-    $ = cheerio.load(content)
-
-    htmlArr = []
-    $('body').contents().each(function(i, elem) {
-        let str = $(this).text()
-        let num = Math.random() * (2500 - 1000) + 1000
-        let tempArr = [str.trim(), Math.floor(num)]
-        htmlArr.push(tempArr)
-    })
-    htmlArr = htmlArr.slice(9, htmlArr.length - 2)
-    htmlArr = htmlArr.filter(function(value, index, arr) {
-        return index % 2 == 0
-    })
-    return htmlArr
-}
-
-// POSTGRES DB STUFF -------------------------------------------------
-
-
-// "postgres://userName:password@serverName/ip:port/nameOfDatabase";
-// var password = "Jordan23Lebron23"
-// var username = "cs421g23"
-// var serverName = "comp421.cs.mcgill.ca"
-// var serverName2 = "comp421"
-// var port = 5432
-// var dbName = "cs421"
-
-// var connectionString = "postgres://" + username + ":" + password + "@" + serverName + "/ip:" + port + "/" + dbName
-
-// var pgClient = new pg.Client(connectionString)
-
-// pgClient.connect(function(err) {
-//     if(err) {
-//         console.error(err);
-//     }
-// })
-
-// var pgClient = new pg.Client(connectionString)
-
-// pgClient.connect()
-
-
-// FILE CREATION -------------------------------------------
-
-function generateNeighbourhoodSQL(fileName, num, relationName) {
+function generateNeighbourhoodSQL(fileName, relationName) {
     let fileString = ""
     let insertINTO = "INSERT INTO " + relationName + " VALUES("
-    return genNeighbourhoods(num)
-        .then(function(data) {
-            data.forEach(hood => {
-                let tempStr = insertINTO + "\'" + hood[0] + "\'" + "," + "\'" + hood[1] + "\'" + ");" + "\n"
-                fileString = fileString + tempStr
-            });
-            fs.appendFile(fileName, fileString, function(err) {
-                if(err) console.log(err);
-                else {
-                    console.log("FILE CREATION SUCCESSFUL");
-                }      
-            })
-            return data
-        })
+    montrealNeighbourhoods.forEach(hood => {
+        let tempStr = insertINTO + "\'" + hood + "\'" + ");" + "\n"
+        fileString = fileString + tempStr
+    })
+    fs.appendFile(fileName, fileString, function(err) {
+        if(err) console.log(err);
+        else {
+            console.log("FILE CREATION SUCCESSFUL");
+        }      
+    })
 }
 
-function generatePeopleSQL(fileName, num, country, relationName) {
+function generatePeopleSQL(fileName, num, country) {
     let fileString = ""
-    let insertINTO = "INSERT INTO " + relationName + " VALUES("
+    let insertINTO = "INSERT INTO Person" + " VALUES("
+    let insertINTOMember = "INSERT INTO Member" + " VALUES("
+    let insertINTOOwner = "INSERT INTO Owner" + " VALUES("
     genNames(num, country)
         .then(function(data) {
             data.forEach(person => {
                 let tempStr = insertINTO + "\'" + person[1] + "\'" + "," + "\'" + person[0] + "\'" + ");" + "\n"
+                let memberStr = insertINTOMember + "\'" + person[1] + "\'" + ");" + "\n"
+                let OwnerStr = insertINTOOwner + "\'" + person[1] + "\'" + ");" + "\n"
                 fileString = fileString + tempStr
+                if(Math.random() < 0.20) {
+                    fileString = fileString + OwnerStr
+                } else {
+                    fileString = fileString + memberStr
+                }
             })
             fs.appendFile(fileName, fileString, function(err) {
                 if(err) console.log(err);
@@ -210,12 +163,6 @@ function generatePropertiesSQL(fileName, num, relationName, country, neighborhoo
 // custom list of neighborhoods, but ensure that they are in the database already, or else your insert statements
 // will not work. 
 
-generatePeopleSQL("genPeople.sql", 100, "CA", "Person")
-generateNeighbourhoodSQL("genHood.sql", 15, "Neighbourhood")
-    .then(function(data) {
-        let dataArr = []
-        for (let i = 0; i < data.length; i++) {
-            dataArr.push(data[i][0])
-        }
-        generatePropertiesSQL("genProp.sql", 100, "Property", "CA" , dataArr)
-    })
+generatePeopleSQL("genPeople.sql", 200, "CA")
+generateNeighbourhoodSQL("genHood.sql", "Neighbourhood")
+generatePropertiesSQL("genProp.sql", 100, "Property", "CA" , montrealNeighbourhoods)
